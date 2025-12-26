@@ -11,7 +11,6 @@ public class AppGUI extends JFrame {
     private JPanel mainPanel;
     private CardLayout cardLayout;
 
-    // Palette Warna
     private final Color PRIMARY_COLOR = new Color(70, 130, 180);
     private final Color BACKGROUND_COLOR = new Color(245, 245, 245);
     private final Color ACCENT_COLOR = new Color(46, 204, 113);
@@ -23,7 +22,6 @@ public class AppGUI extends JFrame {
     private DefaultTableModel tableModel;
     private JTable tabelCatatan;
 
-    // Keperluan Pencarian
     private DefaultTableModel searchResultModel;
     private JTable tabelHasilCari;
     private ArrayList<Integer> indeksAsliPencarian = new ArrayList<>();
@@ -35,7 +33,6 @@ public class AppGUI extends JFrame {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
-        // Menambahkan Halaman ke CardLayout
         mainPanel.add(buatHalamanDashboard(), "Dashboard");
         mainPanel.add(buatHalamanForm(), "Form");
         mainPanel.add(buatHalamanPencarian(), "Search");
@@ -47,7 +44,6 @@ public class AppGUI extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    // Helper untuk membuat tombol estetik
     private JButton createStyledButton(String text, Color color) {
         JButton btn = new JButton(text);
         btn.setBackground(color);
@@ -59,7 +55,6 @@ public class AppGUI extends JFrame {
         return btn;
     }
 
-    // --- HALAMAN 1: DASHBOARD ---
     private JPanel buatHalamanDashboard() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBackground(BACKGROUND_COLOR);
@@ -104,7 +99,6 @@ public class AppGUI extends JFrame {
         return panel;
     }
 
-    // --- HALAMAN 2: FORM TAMBAH / EDIT ---
     private JPanel buatHalamanForm() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(Color.WHITE);
@@ -124,7 +118,6 @@ public class AppGUI extends JFrame {
         panel.add(top, BorderLayout.NORTH);
         panel.add(new JScrollPane(txtIsi), BorderLayout.CENTER);
 
-        // Panel Tombol Bawah
         JPanel botPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         botPanel.setBackground(Color.WHITE);
 
@@ -149,7 +142,6 @@ public class AppGUI extends JFrame {
         return panel;
     }
 
-    // --- HALAMAN 3: PENCARIAN DATA ---
     private JPanel buatHalamanPencarian() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBackground(BACKGROUND_COLOR);
@@ -165,7 +157,6 @@ public class AppGUI extends JFrame {
         };
         tabelHasilCari = new JTable(searchResultModel);
 
-        // Logika Cari
         btnAksiCari.addActionListener(e -> {
             searchResultModel.setRowCount(0);
             indeksAsliPencarian.clear();
@@ -178,7 +169,6 @@ public class AppGUI extends JFrame {
             }
         });
 
-        // Logika Buka Data hasil pencarian
         btnBukaData.addActionListener(e -> {
             int row = tabelHasilCari.getSelectedRow();
             if (row != -1) {
@@ -191,7 +181,6 @@ public class AppGUI extends JFrame {
 
         btnBack.addActionListener(e -> cardLayout.show(mainPanel, "Dashboard"));
 
-        // Layouting
         JPanel topPencarian = new JPanel();
         topPencarian.setBackground(BACKGROUND_COLOR);
         topPencarian.add(new JLabel("Kata Kunci: ")); topPencarian.add(txtInputCari); topPencarian.add(btnAksiCari);
@@ -207,7 +196,6 @@ public class AppGUI extends JFrame {
         return panel;
     }
 
-    // Fungsi pembantu untuk memindahkan data ke Form Edit
     private void bukaUntukEdit(int index) {
         editIndex = index;
         Catatan c = manager.getDaftarCatatan().get(index);
