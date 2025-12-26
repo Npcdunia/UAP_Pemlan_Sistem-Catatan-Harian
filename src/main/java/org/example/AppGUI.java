@@ -11,11 +11,11 @@ public class AppGUI extends JFrame {
     private JPanel mainPanel;
     private CardLayout cardLayout;
 
-    // Warna Estetik (Palette Modern)
-    private final Color PRIMARY_COLOR = new Color(70, 130, 180); // Steel Blue
-    private final Color BACKGROUND_COLOR = new Color(245, 245, 245); // Soft Gray
-    private final Color ACCENT_COLOR = new Color(46, 204, 113); // Emerald Green
-    private final Color DANGER_COLOR = new Color(231, 76, 60);  // Alizarin Red
+    // Palette Warna
+    private final Color PRIMARY_COLOR = new Color(70, 130, 180);
+    private final Color BACKGROUND_COLOR = new Color(245, 245, 245);
+    private final Color ACCENT_COLOR = new Color(46, 204, 113);
+    private final Color DANGER_COLOR = new Color(231, 76, 60);
 
     private JTextField txtJudul;
     private JComboBox<String> cbMood;
@@ -23,8 +23,10 @@ public class AppGUI extends JFrame {
     private DefaultTableModel tableModel;
     private JTable tabelCatatan;
 
-    // Tabel untuk History
-    private DefaultTableModel historyTableModel;
+    // Keperluan Pencarian
+    private DefaultTableModel searchResultModel;
+    private JTable tabelHasilCari;
+    private ArrayList<Integer> indeksAsliPencarian = new ArrayList<>();
 
     private int editIndex = -1;
 
@@ -33,9 +35,10 @@ public class AppGUI extends JFrame {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
+        // Menambahkan Halaman ke CardLayout
         mainPanel.add(buatHalamanDashboard(), "Dashboard");
         mainPanel.add(buatHalamanForm(), "Form");
-        mainPanel.add(buatHalamanHistory(), "History");
+        mainPanel.add(buatHalamanPencarian(), "Search");
 
         add(mainPanel);
         setTitle("✨ My Personal Digital Diary 2025");
@@ -44,7 +47,7 @@ public class AppGUI extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    // Custom Button Helper
+    // Helper untuk membuat tombol estetik
     private JButton createStyledButton(String text, Color color) {
         JButton btn = new JButton(text);
         btn.setBackground(color);
@@ -56,184 +59,162 @@ public class AppGUI extends JFrame {
         return btn;
     }
 
+    // --- HALAMAN 1: DASHBOARD ---
     private JPanel buatHalamanDashboard() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBackground(BACKGROUND_COLOR);
         panel.setBorder(new EmptyBorder(25, 25, 25, 25));
 
-        // Header
         JLabel title = new JLabel("📓 Koleksi Cerita Hari Ini", JLabel.LEFT);
         title.setFont(new Font("Segoe UI", Font.BOLD, 28));
-        title.setForeground(new Color(44, 62, 80));
         panel.add(title, BorderLayout.NORTH);
 
-        // Tabel Custom
-        String[] kolom = {"No", "Tanggal", "Judul Catatan", "Suasana Hati"};
-        tableModel = new DefaultTableModel(kolom, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // Tabel tidak bisa diedit langsung
-            }
+        tableModel = new DefaultTableModel(new String[]{"No", "Tanggal", "Judul", "Mood"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         tabelCatatan = new JTable(tableModel);
-        tabelCatatan.setRowHeight(30);
-        tabelCatatan.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        tabelCatatan.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
-        tabelCatatan.setSelectionBackground(new Color(173, 216, 230));
+        panel.add(new JScrollPane(tabelCatatan), BorderLayout.CENTER);
 
-        JScrollPane scrollPane = new JScrollPane(tabelCatatan);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        // Panel Tombol Kanan (Side Menu)
-        JPanel sideMenu = new JPanel(new GridLayout(5, 1, 10, 10));
+        JPanel sideMenu = new JPanel(new GridLayout(4, 1, 10, 10));
         sideMenu.setBackground(BACKGROUND_COLOR);
 
         JButton btnTambah = createStyledButton("➕ Tambah Baru", PRIMARY_COLOR);
-        JButton btnEdit = createStyledButton("📝 Edit Catatan", ACCENT_COLOR);
+        JButton btnEdit = createStyledButton("📝 Edit Terpilih", ACCENT_COLOR);
         JButton btnHapus = createStyledButton("🗑️ Hapus", DANGER_COLOR);
-        JButton btnHistory = createStyledButton("📊 Statistik", new Color(155, 89, 182));
+        JButton btnCariPage = createStyledButton("🔍 Cari Data", new Color(155, 89, 182));
 
         btnTambah.addActionListener(e -> { editIndex = -1; resetForm(); cardLayout.show(mainPanel, "Form"); });
         btnEdit.addActionListener(e -> {
             int row = tabelCatatan.getSelectedRow();
-            if (row != -1) {
-                editIndex = row;
-                Catatan c = manager.getDaftarCatatan().get(row);
-                txtJudul.setText(c.getJudul());
-                cbMood.setSelectedItem(c.getMood());
-                txtIsi.setText(c.getIsi());
-                cardLayout.show(mainPanel, "Form");
-            } else {
-                JOptionPane.showMessageDialog(this, "Silakan pilih catatan yang ingin diedit.");
-            }
+            if (row != -1) bukaUntukEdit(row);
+            else JOptionPane.showMessageDialog(this, "Pilih catatan di tabel!");
         });
-
         btnHapus.addActionListener(e -> {
             int row = tabelCatatan.getSelectedRow();
-            if (row != -1) {
-                if (JOptionPane.showConfirmDialog(this, "Yakin ingin menghapus kenangan ini?", "Konfirmasi", 0) == 0) {
-                    manager.hapusCatatan(row);
-                    refreshTable();
-                }
+            if (row != -1 && JOptionPane.showConfirmDialog(this, "Hapus permanen?") == 0) {
+                manager.hapusCatatan(row); refreshTable();
             }
         });
+        btnCariPage.addActionListener(e -> cardLayout.show(mainPanel, "Search"));
 
-        btnHistory.addActionListener(e -> cardLayout.show(mainPanel, "History"));
-
-        sideMenu.add(btnTambah); sideMenu.add(btnEdit); sideMenu.add(btnHapus); sideMenu.add(btnHistory);
+        sideMenu.add(btnTambah); sideMenu.add(btnEdit); sideMenu.add(btnHapus); sideMenu.add(btnCariPage);
         panel.add(sideMenu, BorderLayout.EAST);
 
         refreshTable();
         return panel;
     }
 
+    // --- HALAMAN 2: FORM TAMBAH / EDIT ---
     private JPanel buatHalamanForm() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(Color.WHITE);
         panel.setBorder(new EmptyBorder(30, 60, 30, 60));
 
-        JLabel lblTitle = new JLabel("✍️ Tuliskan Curhatanmu", JLabel.CENTER);
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        panel.add(lblTitle, BorderLayout.NORTH);
-
-        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-        centerPanel.setBackground(Color.WHITE);
-
-        // Form Fields
-        JPanel inputPanel = new JPanel(new GridLayout(2, 2, 10, 10));
-        inputPanel.setBackground(Color.WHITE);
         txtJudul = new JTextField();
         cbMood = new JComboBox<>(new String[]{"😊 Senang", "😢 Sedih", "😐 Biasa", "😫 Lelah", "🔥 Semangat"});
-
-        inputPanel.add(new JLabel("Judul Cerita:"));
-        inputPanel.add(txtJudul);
-        inputPanel.add(new JLabel("Bagaimana Mood-mu?"));
-        inputPanel.add(cbMood);
-
         txtIsi = new JTextArea();
         txtIsi.setFont(new Font("Monospaced", Font.PLAIN, 14));
-        txtIsi.setBorder(BorderFactory.createTitledBorder("Tulis Detail Kenangan..."));
+        txtIsi.setBorder(BorderFactory.createTitledBorder("Isi Catatan"));
 
-        centerPanel.add(inputPanel, BorderLayout.NORTH);
-        centerPanel.add(new JScrollPane(txtIsi), BorderLayout.CENTER);
+        JPanel top = new JPanel(new GridLayout(2, 2, 10, 10));
+        top.setBackground(Color.WHITE);
+        top.add(new JLabel("Judul:")); top.add(txtJudul);
+        top.add(new JLabel("Mood:")); top.add(cbMood);
 
-        panel.add(centerPanel, BorderLayout.CENTER);
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(txtIsi), BorderLayout.CENTER);
 
-        // Bottom Buttons
-        JPanel btmPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btmPanel.setBackground(Color.WHITE);
-        JButton btnBatal = createStyledButton("Batal", Color.GRAY);
-        JButton btnSimpan = createStyledButton("💾 Simpan Permanen", ACCENT_COLOR);
+        // Panel Tombol Bawah
+        JPanel botPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        botPanel.setBackground(Color.WHITE);
 
-        btnBatal.addActionListener(e -> cardLayout.show(mainPanel, "Dashboard"));
+        JButton btnBack = createStyledButton("🔙 Kembali", Color.GRAY);
+        JButton btnSimpan = createStyledButton("💾 Simpan Catatan", ACCENT_COLOR);
+
+        btnBack.addActionListener(e -> cardLayout.show(mainPanel, "Dashboard"));
         btnSimpan.addActionListener(e -> {
-            if (txtJudul.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Judul tidak boleh kosong ya!");
+            if (txtJudul.getText().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Judul tidak boleh kosong!");
                 return;
             }
             if (editIndex == -1) manager.tambahCatatan(new Catatan(txtJudul.getText(), txtIsi.getText(), (String)cbMood.getSelectedItem()));
             else manager.updateCatatan(editIndex, txtJudul.getText(), txtIsi.getText(), (String)cbMood.getSelectedItem());
-
-            refreshTable();
-            cardLayout.show(mainPanel, "Dashboard");
+            refreshTable(); cardLayout.show(mainPanel, "Dashboard");
         });
 
-        btmPanel.add(btnBatal); btmPanel.add(btnSimpan);
-        panel.add(btmPanel, BorderLayout.SOUTH);
+        botPanel.add(btnBack);
+        botPanel.add(btnSimpan);
+        panel.add(botPanel, BorderLayout.SOUTH);
 
         return panel;
     }
 
-    private JPanel buatHalamanHistory() {
-        JPanel panel = new JPanel(new BorderLayout(20, 20));
-        panel.setBackground(new Color(236, 240, 241));
-        panel.setBorder(new EmptyBorder(30, 30, 30, 30));
+    // --- HALAMAN 3: PENCARIAN DATA ---
+    private JPanel buatHalamanPencarian() {
+        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        panel.setBackground(BACKGROUND_COLOR);
+        panel.setBorder(new EmptyBorder(25, 25, 25, 25));
 
-        // Judul Halaman
-        JLabel lblTitle = new JLabel("📊 Laporan Riwayat Catatan", JLabel.CENTER);
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        panel.add(lblTitle, BorderLayout.NORTH);
+        JTextField txtInputCari = new JTextField(20);
+        JButton btnAksiCari = createStyledButton("Cari", PRIMARY_COLOR);
+        JButton btnBukaData = createStyledButton("📂 Buka & Edit Data", ACCENT_COLOR);
+        JButton btnBack = createStyledButton("🔙 Kembali ke Utama", Color.GRAY);
 
-        // Tabel untuk Statistik/History
-        String[] kolom = {"Tanggal", "Judul Catatan", "Mood"};
-        historyTableModel = new DefaultTableModel(kolom, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // Tabel history tidak bisa diedit
-            }
+        searchResultModel = new DefaultTableModel(new String[]{"Tanggal", "Judul", "Mood"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
         };
-        JTable historyTable = new JTable(historyTableModel);
-        historyTable.setRowHeight(30);
-        historyTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        historyTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        tabelHasilCari = new JTable(searchResultModel);
 
-        panel.add(new JScrollPane(historyTable), BorderLayout.CENTER);
-
-        JButton btnBack = createStyledButton("🔙 Kembali", PRIMARY_COLOR);
-        btnBack.addActionListener(e -> cardLayout.show(mainPanel, "Dashboard"));
-
-        JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        footerPanel.setBackground(new Color(236, 240, 241));
-        footerPanel.add(btnBack);
-        panel.add(footerPanel, BorderLayout.SOUTH);
-
-        // Update isi tabel history setiap kali halaman ditampilkan
-        panel.addHierarchyListener(e -> {
-            if (panel.isShowing()) {
-                historyTableModel.setRowCount(0); // Bersihkan tabel
-                ArrayList<Catatan> list = manager.getDaftarCatatan();
-                for (Catatan c : list) {
-                    historyTableModel.addRow(new Object[]{
-                            c.getTanggal(),
-                            c.getJudul(),
-                            c.getMood()
-                    });
+        // Logika Cari
+        btnAksiCari.addActionListener(e -> {
+            searchResultModel.setRowCount(0);
+            indeksAsliPencarian.clear();
+            ArrayList<Catatan> semua = manager.getDaftarCatatan();
+            for (int i = 0; i < semua.size(); i++) {
+                if (semua.get(i).getJudul().toLowerCase().contains(txtInputCari.getText().toLowerCase())) {
+                    searchResultModel.addRow(new Object[]{semua.get(i).getTanggal(), semua.get(i).getJudul(), semua.get(i).getMood()});
+                    indeksAsliPencarian.add(i);
                 }
             }
         });
 
+        // Logika Buka Data hasil pencarian
+        btnBukaData.addActionListener(e -> {
+            int row = tabelHasilCari.getSelectedRow();
+            if (row != -1) {
+                int indeksAsli = indeksAsliPencarian.get(row);
+                bukaUntukEdit(indeksAsli);
+            } else {
+                JOptionPane.showMessageDialog(this, "Pilih data hasil cari terlebih dahulu!");
+            }
+        });
+
+        btnBack.addActionListener(e -> cardLayout.show(mainPanel, "Dashboard"));
+
+        // Layouting
+        JPanel topPencarian = new JPanel();
+        topPencarian.setBackground(BACKGROUND_COLOR);
+        topPencarian.add(new JLabel("Kata Kunci: ")); topPencarian.add(txtInputCari); topPencarian.add(btnAksiCari);
+
+        JPanel botPencarian = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        botPencarian.setBackground(BACKGROUND_COLOR);
+        botPencarian.add(btnBack);
+        botPencarian.add(btnBukaData);
+
+        panel.add(topPencarian, BorderLayout.NORTH);
+        panel.add(new JScrollPane(tabelHasilCari), BorderLayout.CENTER);
+        panel.add(botPencarian, BorderLayout.SOUTH);
         return panel;
+    }
+
+    // Fungsi pembantu untuk memindahkan data ke Form Edit
+    private void bukaUntukEdit(int index) {
+        editIndex = index;
+        Catatan c = manager.getDaftarCatatan().get(index);
+        txtJudul.setText(c.getJudul());
+        cbMood.setSelectedItem(c.getMood());
+        txtIsi.setText(c.getIsi());
+        cardLayout.show(mainPanel, "Form");
     }
 
     private void refreshTable() {
